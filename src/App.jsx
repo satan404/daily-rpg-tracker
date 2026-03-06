@@ -248,6 +248,84 @@ function App() {
 
   const hpPercentage = (boss.hp / boss.maxHp) * 100;
 
+  // Process tasks before rendering
+  const todayDayOfWeek = currentTime.getDay();
+  const processedTasks = [...tasks]
+    .filter(t => !t.daysOfWeek || t.daysOfWeek.includes(todayDayOfWeek))
+    .map(task => {
+      let isBurning = false;
+      let progressPercent = 0;
+
+      if (!task.completed && !task.failed && task.startTime && task.endTime) {
+        const s = parse(task.startTime, 'HH:mm', currentTime);
+        let e = parse(task.endTime, 'HH:mm', currentTime);
+        if (isBefore(e, s)) e = new Date(e.getTime() + 24 * 3600000);
+
+        isBurning = isWithinInterval(currentTime, { start: s, end: e });
+
+        if (isBurning) {
+          const totalDurationMs = e.getTime() - s.getTime();
+          const elapsedMs = currentTime.getTime() - s.getTime();
+          progressPercent = Math.min(100, Math.max(0, (elapsedMs / totalDurationMs) * 100));
+        } else if (isBefore(e, currentTime)) {
+          progressPercent = 100;
+        }
+      }
+      return { ...task, isBurning, progressPercent };
+    });
+
+  const burningTasks = processedTasks.filter(t => t.isBurning && !t.completed && !t.failed).sort((a, b) => {
+    if (a.startTime && b.startTime) {
+      return parse(a.startTime, 'HH:mm', currentTime).getTime() - parse(b.startTime, 'HH:mm', currentTime).getTime();
+    }
+    return 0;
+  });
+
+  const otherTasks = processedTasks.filter(t => !t.isBurning || t.completed || t.failed).sort((a, b) => {
+    const aDone = a.completed || a.failed;
+    const bDone = b.completed || b.failed;
+    if (aDone && !bDone) return 1;
+    if (!aDone && bDone) return -1;
+    if (a.startTime && b.startTime) {
+      return parse(a.startTime, 'HH:mm', currentTime).getTime() - parse(b.startTime, 'HH:mm', currentTime).getTime();
+    }
+    return 0;
+  });
+
+  const renderTask = (task) => (
+    <div key={task.id} className={`glass-panel task-item ${task.completed ? 'completed' : ''} ${task.isBurning ? 'burning' : ''}`}>
+      {task.isBurning && <div className="task-progress-bg" style={{ width: `${task.progressPercent}%` }}></div>}
+      <div className="task-item-content">
+        <div className="task-info">
+          <h3 style={{ display: 'flex', alignItems: 'center' }}>
+            {task.title}
+            {task.isBurning && <Flame size={18} color="#ff6b81" className="flame-icon" style={{ marginLeft: '8px' }} />}
+          </h3>
+          {task.startTime && (
+            <p><Clock size={14} style={{ verticalAlign: 'middle', marginRight: '4px', marginBottom: '2px' }} />
+              {task.startTime} - {task.endTime} ({calculateTaskDurationMinutes(task.startTime, task.endTime)} 分鐘)
+            </p>
+          )}
+        </div>
+        <div className="action-buttons">
+          {!task.completed && (
+            <>
+              <button type="button" onClick={() => completeTask(task.id)} style={{ backgroundColor: 'var(--success)' }} title="完成">
+                <Sword size={18} />
+              </button>
+              <button type="button" onClick={() => failTask(task.id)} style={{ backgroundColor: '#666', border: '1px solid #888' }} title="跳過/未完成">
+                <Clock size={18} />
+              </button>
+            </>
+          )}
+          <button type="button" onClick={() => deleteTask(task.id)} style={{ backgroundColor: 'var(--danger)' }} title="刪除">
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (view === 'stats') {
     return (
       <div className="app-container">
@@ -317,6 +395,13 @@ function App() {
         </div>
       </div>
 
+      {burningTasks.length > 0 && (
+        <div className="task-list" style={{ marginBottom: '20px' }}>
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: '#ff6b81', textAlign: 'center' }}>🔥 執行中任務</h3>
+          {burningTasks.map(renderTask)}
+        </div>
+      )}
+
       <div className="glass-panel">
         <form onSubmit={addTask} className="add-task-form">
           <div className="form-row">
@@ -339,6 +424,22 @@ function App() {
                 required
               />
             </div>
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <label style={{ fontSize: '0.8rem', color: '#aaa' }}>持續時間</label>
+              <select
+                className="input-field"
+                value={newTaskDuration}
+                onChange={e => setNewTaskDuration(e.target.value)}
+              >
+                <option value="5">+5 分鐘</option>
+                <option value="15">+15 分鐘</option>
+                <option value="30">+30 分鐘</option>
+                <option value="60">+1 小時</option>
+                <option value="120">+2 小時</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
               <label style={{ fontSize: '0.8rem', color: '#aaa' }}>重複設定</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '5px' }}>
@@ -376,83 +477,10 @@ function App() {
         </form>
 
         <div className="task-list">
-          {tasks.filter(t => !t.daysOfWeek || t.daysOfWeek.includes(currentTime.getDay())).length === 0 ? (
+          {processedTasks.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#aaa', margin: '20px 0' }}>今天還沒有任務。在上方新增一個開始吧！</p>
           ) : (
-            [...tasks].filter(t => !t.daysOfWeek || t.daysOfWeek.includes(currentTime.getDay())).map(task => {
-              // Determine if task is currently "burning" and its progress
-              let isBurning = false;
-              let progressPercent = 0;
-
-              if (!task.completed && !task.failed && task.startTime && task.endTime) {
-                const s = parse(task.startTime, 'HH:mm', currentTime);
-                let e = parse(task.endTime, 'HH:mm', currentTime);
-                if (isBefore(e, s)) e = new Date(e.getTime() + 24 * 3600000); // handle cross midnight
-
-                isBurning = isWithinInterval(currentTime, { start: s, end: e });
-
-                if (isBurning) {
-                  const totalDurationMs = e.getTime() - s.getTime();
-                  const elapsedMs = currentTime.getTime() - s.getTime();
-                  progressPercent = Math.min(100, Math.max(0, (elapsedMs / totalDurationMs) * 100));
-                } else if (isBefore(e, currentTime)) {
-                  // If time is completely passed
-                  progressPercent = 100;
-                }
-              }
-              return { ...task, isBurning, progressPercent };
-            }).sort((a, b) => {
-              // 1. Completed/Failed go to bottom
-              const aDone = a.completed || a.failed;
-              const bDone = b.completed || b.failed;
-              if (aDone && !bDone) return 1;
-              if (!aDone && bDone) return -1;
-
-              // 2. Burning goes to top inside active tasks
-              if (a.isBurning && !b.isBurning) return -1;
-              if (!a.isBurning && b.isBurning) return 1;
-
-              // 3. Keep rest sorted by start time
-              if (a.startTime && b.startTime) {
-                return parse(a.startTime, 'HH:mm', currentTime).getTime() - parse(b.startTime, 'HH:mm', currentTime).getTime();
-              }
-              return 0;
-            }).map(task => {
-              const { isBurning, progressPercent, ...restTask } = task; // Clean prop spread (optional)
-              return (
-                <div key={task.id} className={`glass-panel task-item ${task.completed ? 'completed' : ''} ${isBurning ? 'burning' : ''}`}>
-                  {isBurning && <div className="task-progress-bg" style={{ width: `${progressPercent}%` }}></div>}
-                  <div className="task-item-content">
-                    <div className="task-info">
-                      <h3 style={{ display: 'flex', alignItems: 'center' }}>
-                        {task.title}
-                        {isBurning && <Flame size={18} color="#ff6b81" className="flame-icon" style={{ marginLeft: '8px' }} />}
-                      </h3>
-                      {task.startTime && (
-                        <p><Clock size={14} style={{ verticalAlign: 'middle', marginRight: '4px', marginBottom: '2px' }} />
-                          {task.startTime} - {task.endTime} ({calculateTaskDurationMinutes(task.startTime, task.endTime)} 分鐘)
-                        </p>
-                      )}
-                    </div>
-                    <div className="action-buttons">
-                      {!task.completed && (
-                        <>
-                          <button onClick={() => completeTask(task.id)} style={{ backgroundColor: 'var(--success)' }} title="完成">
-                            <Sword size={18} />
-                          </button>
-                          <button onClick={() => failTask(task.id)} style={{ backgroundColor: '#666', border: '1px solid #888' }} title="跳過/未完成">
-                            <Clock size={18} />
-                          </button>
-                        </>
-                      )}
-                      <button onClick={() => deleteTask(task.id)} style={{ backgroundColor: 'var(--danger)' }} title="刪除">
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+            otherTasks.map(renderTask)
           )}
         </div>
       </div>

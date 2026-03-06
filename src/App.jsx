@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sword, Plus, Trash2, Clock, Flame, BarChart2, X } from 'lucide-react';
 import { parse, differenceInMinutes, isWithinInterval, isBefore, format } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -341,7 +341,7 @@ function App() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
               <label style={{ fontSize: '0.8rem', color: '#aaa' }}>重複設定</label>
-              <div style={{ display: 'flex', gap: '4px', marginTop: '5px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '5px' }}>
                 {['一', '二', '三', '四', '五', '六', '日'].map((day, index) => {
                   const dayIdx = index === 6 ? 0 : index + 1; // map visually to Date.getDay()
                   const isSelected = newTaskDays.includes(dayIdx);

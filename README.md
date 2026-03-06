@@ -1,8 +1,65 @@
-# React + Vite
+# ⚔️ 日常任務 RPG (Daily RPG Tracker)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+這是一個將您的「每日例行公事」遊戲化的待辦事項 (To-Do List) Web 應用程式。專為所有年齡層設計 (6 歲到 99 歲都能輕鬆上手)，讓完成日常任務就像打怪升級一樣充滿樂趣！
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🌟 主要功能特色
+
+*   👾 **每日魔王挑戰**：每天都會自動出現一隻全新的魔王 (例如：拖延史萊姆、手機成癮猿) 等您來擊敗！
+*   🔥 **倒數燃燒視覺效果**：任務進入「執行中」的時間區段時，卡片會發出紅光並有進度條慢慢填滿，讓您感受時間流逝的緊迫感。
+*   ⚡ **隨機魔法攻擊特效**：點擊「完成任務」的瞬間，畫面會隨機施放魔法攻擊 (閃電、火焰、冰凍、龍捲風等十種特效)，對魔王造成傷害！
+*   ⏰ **智慧時間設定**：可選擇任務開始時間，並快速加上持續時間 (例如 +15 分鐘、+1 小時) 自動計算結束時間。
+*   🎶 **時間超時音效提醒**：任務即將結束或逾時，都會有不同節奏的提示音來提醒您該去打怪了。
+*   🔄 **週期性/重複任務**：可以指定任務在每週的哪幾天出現 (例如：週一到週五)，每天自動為您重置任務挑戰狀態。
+*   📈 **數據與統計 (熱力圖 & 折線圖)**：詳細記錄每個月的活躍度與完成率，讓您的努力留下美麗的軌跡。
+*   📱 **響應式設計 & PWA 支持**：在手機或電腦上都能完美顯示，並可將網站「加入主畫面」當作原生 App 使用。
+
+---
+
+## 🚀 快速開始
+
+### 1. 安裝依賴套件
+
+請先確保您的電腦環境已安裝 [Node.js](https://nodejs.org/)。
+
+```bash
+npm install
+```
+
+### 2. 本地開發與運行
+
+```bash
+npm run dev
+```
+執行後，開啟瀏覽器前往 `http://localhost:5173` 即可開始使用。
+
+### 3. 編譯打包 (生產環境)
+
+```bash
+npm run build
+```
+將會產出靜態檔案至 `dist/` 資料夾中。
+
+---
+
+## ☁️ 一鍵部署 (Vercel)
+
+本專案可以直接部署至 Vercel (或其他靜態網站網頁服務如 Netlify, GitHub Pages)。
+
+1. 將程式碼推送到您的 GitHub Repository。
+2. 進入 [Vercel](https://vercel.com/)，點選 **Add New Project**。
+3. 匯入該 GitHub Repository，Vercel 會自動偵測框架為 `Vite`。
+4. 專案根目錄已包含 `vercel.json` 確保 React Router 等 SPA 路由運作正常。
+5. 點擊 **Deploy** 即可在一分鐘內上線發布！
+
+---
+
+## 🛠 技術堆疊
+
+*   **前端框架**: React 18, Vite
+*   **樣式與設計**: Vanilla CSS, Lucide-React (Icons)
+*   **圖表**: Recharts
+*   **時間處理**: date-fns
+*   **資料儲存**: LocalStorage (完全無伺服器架構)
+*   **PWA**: vite-plugin-pwa

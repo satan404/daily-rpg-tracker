@@ -444,3 +444,43 @@
   font-style: italic;
   text-align: center;
 }
+
+/* --- Responsive Adjustments for Mobile (e.g. iPhone SE) --- */
+@media (max-width: 480px) {
+  .app-container {
+    padding: 10px;
+  }
+
+  .glass-panel {
+    padding: 15px;
+  }
+
+  .add-task-form .form-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .task-item-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .action-buttons {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 5px;
+  }
+
+  .boss-emoji {
+    font-size: 3.5rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+}

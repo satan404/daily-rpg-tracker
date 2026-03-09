@@ -237,8 +237,61 @@
 }
 
 /* --- Ultimate Attacks --- */
+.ultimate-name-banner {
+  font-size: 4rem;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 0 20px cyan, 0 0 40px blue, 0 0 60px magenta;
+  position: absolute;
+  top: -150px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 101;
+  white-space: nowrap;
+  animation: banner-enter 3.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes banner-enter {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50px) scale(0.5);
+    letter-spacing: -1rem;
+  }
+
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.2);
+    letter-spacing: 1rem;
+  }
+
+  25% {
+    transform: translate(-50%, 0) scale(1);
+    letter-spacing: 0.5rem;
+  }
+
+  85% {
+    opacity: 1;
+    transform: translate(-50%, -20px) scale(1);
+    letter-spacing: 0.5rem;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50px) scale(1.5);
+    letter-spacing: 2rem;
+  }
+}
+
+.ultimate-emoji-effect {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
 .ultimate-meteor {
-  animation: ult-meteor 2s ease-in forwards;
+  animation: ult-meteor 3s ease-in forwards;
   font-size: 8rem;
   z-index: 100;
 }
@@ -275,7 +328,7 @@
 }
 
 .ultimate-laser {
-  animation: ult-laser 1.8s ease-in-out forwards;
+  animation: ult-laser 2.5s ease-in-out forwards;
   font-size: 8rem;
   z-index: 100;
 }
@@ -311,7 +364,7 @@
 }
 
 .ultimate-satellite {
-  animation: ult-satellite 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: ult-satellite 3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   font-size: 8rem;
   z-index: 100;
 }
@@ -352,7 +405,7 @@
 }
 
 .ultimate-blackhole {
-  animation: ult-blackhole 2.5s ease-in forwards;
+  animation: ult-blackhole 3.5s ease-in forwards;
   font-size: 8rem;
   z-index: 100;
 }
@@ -388,7 +441,7 @@
 }
 
 .ultimate-evil {
-  animation: ult-evil 2s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+  animation: ult-evil 3s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
   font-size: 8rem;
   z-index: 100;
 }
@@ -434,7 +487,7 @@
 }
 
 .ultimate-slash {
-  animation: ult-slash 1.5s linear forwards;
+  animation: ult-slash 2.5s linear forwards;
   font-size: 8rem;
   z-index: 100;
 }

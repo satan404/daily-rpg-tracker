@@ -1,13 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Sword, Plus, Trash2, Clock, Flame, BarChart2, X } from 'lucide-react';
-import { parse, differenceInMinutes, isWithinInterval, isBefore, format } from 'date-fns';
+import { format, parse, differenceInMinutes, isWithinInterval, isBefore } from 'date-fns';
+import { BarChart2, Plus, X, Award, Flame, Star, Trophy, Target, Sword, Trash2, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { RPGEngine } from './RPGEngine';
 import { AchievementEngine } from './AchievementEngine';
+
 import './App.css';
 
 function App() {
-  const [boss, setBoss] = useState(RPGEngine.getDailyBoss());
+  const [boss, setBoss] = useState(() => {
+    let offset = 0;
+    while (offset < 200) { // Safety limit
+      const tempBoss = RPGEngine.getDailyBoss(offset);
+      const saved = localStorage.getItem(`boss_${tempBoss.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.hp > 0) {
+          return parsed;
+        }
+      } else {
+        return tempBoss;
+      }
+      offset++;
+    }
+    return RPGEngine.getDailyBoss(0);
+  });
   const [tasks, setTasks] = useState([]);
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskStartTime, setNewTaskStartTime] = useState('');
@@ -52,11 +69,7 @@ function App() {
 
       setTasks(parsedTasks);
     }
-    const savedBoss = localStorage.getItem(`boss_${boss.id}`);
-    if (savedBoss) {
-      setBoss(JSON.parse(savedBoss));
-    }
-  }, [boss.id]);
+  }, []);
 
   // Save to localStorage when tasks/boss change
   useEffect(() => {
@@ -261,10 +274,12 @@ function App() {
 
           // Spawn next boss after 2 seconds
           setTimeout(() => {
-            const nextOffset = (boss.offset || 0) + 1;
-            const nextBoss = RPGEngine.getDailyBoss(nextOffset);
-            setBoss(nextBoss);
-            setMessage(`野生的 ${nextBoss.name} 出現了！`);
+            setBoss(prevBoss => {
+              const nextOffset = (prevBoss.offset || 0) + 1;
+              const nextBoss = RPGEngine.getDailyBoss(nextOffset);
+              setMessage(`野生的 ${nextBoss.name} 出現了！`);
+              return nextBoss;
+            });
           }, 2000);
 
         } else {
@@ -297,18 +312,19 @@ function App() {
         { type: 'slash', emoji: '🗡️', name: '烈風亂斬' }
       ];
       const randomUlt = ultimateTypes[Math.floor(Math.random() * ultimateTypes.length)];
-      // Generate Particles
+
+      // Generate Original CSS DOM Particles
       const newParticles = [];
       const particleEmojis = ['✨', '💥', '⚡', '💫', '🔥', '🌟', '💨'];
       for (let i = 0; i < 40; i++) {
         newParticles.push({
           id: i,
           emoji: particleEmojis[Math.floor(Math.random() * particleEmojis.length)],
-          tx: (Math.random() - 0.5) * 400 + 'px', // Random X translation (-200px to +200px)
-          ty: (Math.random() - 0.5) * 400 + 'px', // Random Y translation
+          tx: (Math.random() - 0.5) * 600 + 'px', // Random X translation 
+          ty: (Math.random() - 0.5) * 600 + 'px', // Random Y translation
           delay: Math.random() * 0.5 + 's', // Staggered start
-          duration: (Math.random() * 1 + 1) + 's', // 1s to 2s
-          scale: Math.random() * 1.5 + 0.5,
+          duration: (Math.random() * 1.5 + 1.5) + 's', // 1.5s to 3s
+          scale: Math.random() * 2 + 1, // Larger scale 1 to 3
           color: `hsl(${Math.random() * 360}, 100%, 70%)`
         });
       }
@@ -318,12 +334,12 @@ function App() {
 
       const ultimateDamage = 300; // Massive damage
 
-      // Longer timeout to allow complex animations to play out (2.5 seconds)
+      // Longer timeout to allow complex animations to play out (3.5 seconds)
       setTimeout(() => {
         setUltimateEffect(null);
         setParticles([]);
         setIsHit(false);
-      }, 2500);
+      }, 3500);
 
       const newHp = Math.max(0, boss.hp - ultimateDamage);
       setBoss({ ...boss, hp: newHp });
@@ -335,11 +351,13 @@ function App() {
 
         // Wait a bit longer before spawning the next boss so they can see the full effect
         setTimeout(() => {
-          const nextOffset = (boss.offset || 0) + 1;
-          const nextBoss = RPGEngine.getDailyBoss(nextOffset);
-          setBoss(nextBoss);
-          setMessage(`野生的 ${nextBoss.name} 出現了！`);
-        }, 2500);
+          setBoss(prevBoss => {
+            const nextOffset = (prevBoss.offset || 0) + 1;
+            const nextBoss = RPGEngine.getDailyBoss(nextOffset);
+            setMessage(`野生的 ${nextBoss.name} 出現了！`);
+            return nextBoss;
+          });
+        }, 3500);
       } else {
         setMessage(`毀天滅地！【${randomUlt.name}】造成了 ${ultimateDamage} 點巨大傷害！ 💥`);
       }
@@ -597,7 +615,10 @@ function App() {
             <div className={`magic-effect effect-${attackEffect.type}`}>{attackEffect.emoji}</div>
           )}
           {ultimateEffect && (
-            <div className={`magic-effect ultimate-${ultimateEffect.type}`} style={{ zIndex: 10 }}>{ultimateEffect.emoji}</div>
+            <div className="ultimate-container" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 10, pointerEvents: 'none' }}>
+              <div className="ultimate-name-banner">{ultimateEffect.name}</div>
+              <div className={`ultimate-emoji-effect ultimate-${ultimateEffect.type}`}>{ultimateEffect.emoji}</div>
+            </div>
           )}
           {particles.map(p => (
             <div

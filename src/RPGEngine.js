@@ -1,35 +1,37 @@
 // Simple RPG Engine for Daily Tracker
 
-const MONSTER_NAMES = [
-    "拖延史萊姆",
-    "分心哥布林",
-    "懶骨頭骷髏",
-    "瞌睡蟲精靈",
-    "混亂小惡魔",
-    "壓力山大食人魔",
-    "健忘幽靈",
-    "沙發馬鈴薯獸",
-    "網購黑洞惡龍",
-    "明天再說巫師",
-    "半途而廢騎士",
-    "完美主義巨像",
-    "三分鐘熱度盜賊",
-    "無頭蒼蠅精怪",
-    "摸魚美人魚",
-    "眼皮沉重熊",
-    "焦慮章魚",
-    "手機成癮猿",
-    "糖分暴走鼠",
-    "遲到大王蝸牛",
-    "藉口多多鸚鵡"
+const MONSTER_PREFIXES = [
+    "拖延", "分心", "懶骨頭", "瞌睡蟲", "混亂", "壓力山大", "健忘",
+    "網購", "明天再說", "半途而廢", "完美主義", "三分鐘熱度", "無頭蒼蠅", "摸魚",
+    "眼皮沉重", "焦慮", "手機成癮", "糖分暴走", "遲到大王", "藉口多多",
+    "隨便啦", "不想面對", "情緒勒索", "自暴自棄", "過度反思"
 ];
 
-const ENCOURAGEMENTS = [
-    "別放棄！每一次努力都有用！",
-    "魔王正在回血，但你一定能贏！",
-    "哎呀沒打中... 但你已經摸清它的套路了！",
-    "休息一下也無妨。英雄明天會繼續戰鬥！",
-    "日常生活的地下城很艱難，但你更強大！"
+const MONSTER_NOUNS = [
+    { name: "史萊姆", emoji: '🦠' },
+    { name: "哥布林", emoji: '👺' },
+    { name: "骷髏", emoji: '💀' },
+    { name: "精靈", emoji: '🧚‍♂️' },
+    { name: "小惡魔", emoji: '👿' },
+    { name: "食人魔", emoji: '👹' },
+    { name: "幽靈", emoji: '👻' },
+    { name: "馬鈴薯獸", emoji: '🥔' },
+    { name: "惡龍", emoji: '🐉' },
+    { name: "巫師", emoji: '🧙‍♂️' },
+    { name: "騎士", emoji: '🤺' },
+    { name: "巨像", emoji: '🗿' },
+    { name: "盜賊", emoji: '🥷' },
+    { name: "精怪", emoji: '👾' },
+    { name: "美人魚", emoji: '🧜‍♀️' },
+    { name: "巨大熊", emoji: '🐻' },
+    { name: "大章魚", emoji: '🐙' },
+    { name: "猿猴", emoji: '🦧' },
+    { name: "巨鼠", emoji: '🐭' },
+    { name: "蝸牛精", emoji: '🐌' },
+    { name: "鸚鵡獸", emoji: '🦜' },
+    { name: "外星人", emoji: '👽' },
+    { name: "機械兵", emoji: '🤖' },
+    { name: "食人花", emoji: '🥀' }
 ];
 
 export class RPGEngine {
@@ -38,27 +40,28 @@ export class RPGEngine {
         const today = new Date().toDateString();
 
         // Simple hash function to pick a monster consistently
-        let hash = 0;
+        let hash1 = 0;
+        let hash2 = 0;
         const seedStr = today + offset;
         for (let i = 0; i < seedStr.length; i++) {
-            hash = seedStr.charCodeAt(i) + ((hash << 5) - hash);
+            hash1 = seedStr.charCodeAt(i) + ((hash1 << 5) - hash1);
+            hash2 = seedStr.charCodeAt(seedStr.length - 1 - i) + ((hash2 << 5) - hash2);
         }
 
-        const index = Math.abs(hash) % MONSTER_NAMES.length;
+        const prefixIndex = Math.abs(hash1) % MONSTER_PREFIXES.length;
+        const nounIndex = Math.abs(hash2) % MONSTER_NOUNS.length;
+
         const baseHp = 100 + (offset * 20); // HP scales with how many you defeated today
 
-        const allEmojis = [
-            '🦠', '👺', '💀', '💨', '👾', '👹', '👻', '🥔', '🐉', '🧙‍♂️',
-            '🤺', '🗿', '🥷', '🦟', '🧜‍♀️', '🐻', '🐙', '🦧', '🐭', '🐌', '🦜'
-        ];
+        const nounObj = MONSTER_NOUNS[nounIndex];
 
         return {
             id: `${today}-${offset}`,
             offset: offset,
-            name: MONSTER_NAMES[index],
+            name: `${MONSTER_PREFIXES[prefixIndex]}${nounObj.name}`,
             maxHp: baseHp,
-            hp: baseHp, // Need to restore current hp from local storage in components
-            emoji: allEmojis[index]
+            hp: baseHp,
+            emoji: nounObj.emoji
         };
     }
 

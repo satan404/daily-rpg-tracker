@@ -3,6 +3,7 @@ import { Sword, Plus, Trash2, Clock, Flame, BarChart2, X } from 'lucide-react';
 import { parse, differenceInMinutes, isWithinInterval, isBefore, format } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { RPGEngine } from './RPGEngine';
+import { AchievementEngine } from './AchievementEngine';
 import './App.css';
 
 function App() {
@@ -11,13 +12,15 @@ function App() {
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskStartTime, setNewTaskStartTime] = useState('');
   const [newTaskDuration, setNewTaskDuration] = useState('15'); // default 15 mins
-  const [newTaskDays, setNewTaskDays] = useState([1, 2, 3, 4, 5, 6, 0]); // 0=Sun, 1=Mon... default everyday
+  const [newTaskDays, setNewTaskDays] = useState([new Date().getDay()]); // Default to today only
   const [message, setMessage] = useState('出現了一隻新魔王！完成任務來打敗它吧！');
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [view, setView] = useState('game');
+  const [view, setView] = useState('game'); // 'game', 'stats', 'profile'
   const [statsData, setStatsData] = useState([]);
   const [attackEffect, setAttackEffect] = useState(null); // { type: 'fire', emoji: '🔥' }
+  const [ultimateEffect, setUltimateEffect] = useState(null); // { type: 'meteor', emoji: '☄️' }
   const [isHit, setIsHit] = useState(false);
+  const [profile, setProfile] = useState(AchievementEngine.getProfileState());
 
   const openStats = async () => {
     const { StatsEngine } = await import('./StatsEngine');
@@ -64,6 +67,25 @@ function App() {
       StatsEngine.saveDailyRecord(tasks);
     });
   }, [tasks, boss]);
+
+  // Failsafe: if boss is dead for more than 5 seconds, auto-respawn
+  useEffect(() => {
+    let timeoutId;
+    if (boss.hp <= 0) {
+      timeoutId = setTimeout(() => {
+        setBoss(prevBoss => {
+          if (prevBoss.hp <= 0) {
+            const nextOffset = (prevBoss.offset || 0) + 1;
+            const nextBoss = RPGEngine.getDailyBoss(nextOffset);
+            setMessage(`野生的 ${nextBoss.name} 出現了！`);
+            return nextBoss;
+          }
+          return prevBoss;
+        });
+      }, 5000);
+    }
+    return () => clearTimeout(timeoutId);
+  }, [boss.hp]);
 
   // Real-time tracker for Audio & Burning effect
   useEffect(() => {
@@ -169,7 +191,7 @@ function App() {
     setTasks([...tasks, newTask].sort((a, b) => a.startTime.localeCompare(b.startTime)));
     setNewTaskName('');
     setNewTaskStartTime('');
-    setNewTaskDays([1, 2, 3, 4, 5, 6, 0]); // Reset to everyday
+    setNewTaskDays([new Date().getDay()]); // Reset to today
   };
 
   const calculateTaskDurationMinutes = (start, end) => {
@@ -185,60 +207,134 @@ function App() {
   };
 
   const completeTask = (id) => {
+    // 1. Scroll up immediately
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // 2. Mark task as completed immediately for UI responsiveness
     const task = tasks.find(t => t.id === id);
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const newTasks = tasks.map(t => t.id === id ? { ...t, completed: true, lastCompletedDate: todayStr } : t);
+    setTasks(newTasks);
 
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: true, lastCompletedDate: todayStr } : t));
+    // 2.5 Trigger Achievement Engine
+    const { profile: newProfile, newlyUnlocked } = AchievementEngine.onTaskCompleted(id, newTasks);
+    setProfile(newProfile);
 
-    // Choose random magic attack (10 types)
-    const effects = [
-      { type: 'lightning', emoji: '⚡' },
-      { type: 'fire', emoji: '🔥' },
-      { type: 'freeze', emoji: '🧊' },
-      { type: 'tornado', emoji: '🌪️' },
-      { type: 'earth', emoji: '🪨' },
-      { type: 'light', emoji: '✨' },
-      { type: 'dark', emoji: '🌑' },
-      { type: 'poison', emoji: '🧪' },
-      { type: 'star', emoji: '🌠' },
-      { type: 'water', emoji: '🌊' }
-    ];
-    const randomEffect = effects[Math.floor(Math.random() * effects.length)];
-    setAttackEffect(randomEffect);
-    setIsHit(true);
-
-    // Clear effect and hit state after animation (1s max to cover all animations)
+    // 3. Delay the attack effect and damage calculation to wait for scroll (400ms)
     setTimeout(() => {
-      setAttackEffect(null);
-      setIsHit(false);
-    }, 1000);
+      // Choose random magic attack (10 types)
+      const effects = [
+        { type: 'lightning', emoji: '⚡' },
+        { type: 'fire', emoji: '🔥' },
+        { type: 'freeze', emoji: '🧊' },
+        { type: 'tornado', emoji: '🌪️' },
+        { type: 'earth', emoji: '🪨' },
+        { type: 'light', emoji: '✨' },
+        { type: 'dark', emoji: '🌑' },
+        { type: 'poison', emoji: '🧪' },
+        { type: 'star', emoji: '🌠' },
+        { type: 'water', emoji: '🌊' }
+      ];
+      const randomEffect = effects[Math.floor(Math.random() * effects.length)];
+      setAttackEffect(randomEffect);
+      setIsHit(true);
 
-    if (boss.hp > 0 && task) {
-      const duration = calculateTaskDurationMinutes(task.startTime, task.endTime);
-      const damage = RPGEngine.calculateDamage(duration);
-      const newHp = Math.max(0, boss.hp - damage);
+      // Clear effect and hit state after animation (1s max to cover all animations)
+      setTimeout(() => {
+        setAttackEffect(null);
+        setIsHit(false);
+      }, 1000);
+
+      if (boss.hp > 0 && task) {
+        const duration = calculateTaskDurationMinutes(task.startTime, task.endTime);
+        const damage = RPGEngine.calculateDamage(duration);
+        const newHp = Math.max(0, boss.hp - damage);
+        setBoss({ ...boss, hp: newHp });
+
+        if (newHp === 0) {
+          AchievementEngine.onBossDefeated();
+          setProfile(AchievementEngine.getProfileState());
+
+          let unlockMsg = newlyUnlocked.length > 0 ? ` 獲得勳章：${newlyUnlocked.map(b => b.emoji).join(' ')}` : '';
+          setMessage(`勝利！你用 ${randomEffect.emoji} 打敗了 ${boss.name}！ 🏆${unlockMsg} 新的魔王即將出現...`);
+
+          // Spawn next boss after 2 seconds
+          setTimeout(() => {
+            const nextOffset = (boss.offset || 0) + 1;
+            const nextBoss = RPGEngine.getDailyBoss(nextOffset);
+            setBoss(nextBoss);
+            setMessage(`野生的 ${nextBoss.name} 出現了！`);
+          }, 2000);
+
+        } else {
+          let unlockMsg = newlyUnlocked.length > 0 ? ` 獲得勳章：${newlyUnlocked.map(b => b.emoji).join(' ')}` : '';
+          setMessage(`強擊！魔王受到 ${damage} 點傷害。${unlockMsg} 繼續保持！ ⚔️`);
+        }
+      }
+    }, 400); // Wait 400ms for smooth scroll to finish
+  };
+
+  const castUltimate = () => {
+    if (profile.sp <= 0 || boss.hp <= 0) return;
+
+    // 1. Deduct SP
+    const { success, profile: newProfile } = AchievementEngine.useSp();
+    if (!success) return;
+    setProfile(newProfile);
+
+    // 2. Scroll up immediately
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // 3. Trigger Ultimate Effect
+    setTimeout(() => {
+      const ultimateTypes = [
+        { type: 'meteor', emoji: '☄️', name: '隕石墜落' },
+        { type: 'laser', emoji: '💫', name: '雷射加農砲' },
+        { type: 'satellite', emoji: '🛸', name: '衛星武器砲擊' },
+        { type: 'blackhole', emoji: '🌌', name: '黑洞墜擊' },
+        { type: 'evil', emoji: '👿', name: '惡之波動' },
+        { type: 'slash', emoji: '🗡️', name: '烈風亂斬' }
+      ];
+      const randomUlt = ultimateTypes[Math.floor(Math.random() * ultimateTypes.length)];
+      setUltimateEffect(randomUlt);
+      setIsHit(true);
+
+      const ultimateDamage = 300; // Massive damage
+
+      // Longer timeout to allow complex animations to play out (2.5 seconds)
+      setTimeout(() => {
+        setUltimateEffect(null);
+        setIsHit(false);
+      }, 2500);
+
+      const newHp = Math.max(0, boss.hp - ultimateDamage);
       setBoss({ ...boss, hp: newHp });
 
       if (newHp === 0) {
-        setMessage(`勝利！你用 ${randomEffect.emoji} 打敗了 ${boss.name}！ 🏆 新的魔王即將出現...`);
+        AchievementEngine.onBossDefeated();
+        setProfile(AchievementEngine.getProfileState());
+        setMessage(`太神啦！你用終極大招【${randomUlt.name}】秒殺了 ${boss.name}！ 🌟🌟🌟 新的魔王即將出現...`);
 
-        // Spawn next boss after 2 seconds
+        // Wait a bit longer before spawning the next boss so they can see the full effect
         setTimeout(() => {
           const nextOffset = (boss.offset || 0) + 1;
           const nextBoss = RPGEngine.getDailyBoss(nextOffset);
           setBoss(nextBoss);
           setMessage(`野生的 ${nextBoss.name} 出現了！`);
-        }, 2000);
-
+        }, 2500);
       } else {
-        setMessage(`強擊！魔王受到 ${damage} 點傷害。繼續保持！ ⚔️`);
+        setMessage(`毀天滅地！【${randomUlt.name}】造成了 ${ultimateDamage} 點巨大傷害！ 💥`);
       }
-    }
+    }, 400); // 400ms delay to wait for scrolling up
   };
 
   const failTask = (id) => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     setTasks(tasks.map(t => t.id === id ? { ...t, completed: true, failed: true, lastCompletedDate: todayStr } : t));
+
+    // Break Combo
+    setProfile(AchievementEngine.onTaskFailed());
+
     setMessage(RPGEngine.getEncouragement());
   };
 
@@ -363,6 +459,74 @@ function App() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'profile') {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const todaysTasks = tasks.filter(t => t.lastCompletedDate === todayStr && t.completed && !t.failed);
+
+    return (
+      <div className="app-container">
+        <div className="glass-panel" style={{ position: 'relative' }}>
+          <button onClick={() => setView('game')} style={{ position: 'absolute', top: 10, right: 10, background: 'transparent' }}><X color="white" /></button>
+
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '10px' }}>👑</div>
+            <h2 style={{ margin: 0 }}>{profile.heroName} 的英雄手冊</h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+            <div className="glass-panel" style={{ padding: '15px', textAlign: 'center', background: 'rgba(0,0,0,0.2)' }}>
+              <div style={{ fontSize: '1.5rem', color: '#4ade80' }}>{profile.totalBossesDefeated}</div>
+              <div style={{ fontSize: '0.8rem', color: '#aaa' }}>擊敗魔王</div>
+            </div>
+            <div className="glass-panel" style={{ padding: '15px', textAlign: 'center', background: 'rgba(0,0,0,0.2)' }}>
+              <div style={{ fontSize: '1.5rem', color: '#60a5fa' }}>{profile.totalTasksCompleted}</div>
+              <div style={{ fontSize: '0.8rem', color: '#aaa' }}>完成任務</div>
+            </div>
+            <div className="glass-panel" style={{ padding: '15px', textAlign: 'center', background: 'rgba(0,0,0,0.2)' }}>
+              <div style={{ fontSize: '1.5rem', color: '#fbbf24' }}>{profile.currentDailyStreak} 天</div>
+              <div style={{ fontSize: '0.8rem', color: '#aaa' }}>連續登入 (最高:{profile.maxDailyStreak})</div>
+            </div>
+            <div className="glass-panel" style={{ padding: '15px', textAlign: 'center', background: 'rgba(0,0,0,0.2)' }}>
+              <div style={{ fontSize: '1.5rem', color: '#ff6b81' }}>{profile.currentCombo}</div>
+              <div style={{ fontSize: '0.8rem', color: '#aaa' }}>連擊數 (最高:{profile.maxCombo})</div>
+            </div>
+          </div>
+
+          <h3>🏅 獲得勳章</h3>
+          {profile.unlockedBadges.length === 0 ? (
+            <p style={{ color: '#aaa', fontStyle: 'italic', textAlign: 'center' }}>尚未獲得勳章，繼續努力！</p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
+              {profile.unlockedBadges.map(bId => {
+                const badge = AchievementEngine.BADGES[bId];
+                return (
+                  <div key={bId} className="glass-panel" style={{ padding: '10px', textAlign: 'center', background: 'rgba(255,215,0,0.1)', border: '1px solid rgba(255,215,0,0.3)', width: '80px' }} title={badge.description}>
+                    <div style={{ fontSize: '2rem' }}>{badge.emoji}</div>
+                    <div style={{ fontSize: '0.7rem', marginTop: '5px' }}>{badge.name}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <h3 style={{ marginTop: '30px' }}>📜 今日戰績</h3>
+          {todaysTasks.length === 0 ? (
+            <p style={{ color: '#aaa', fontStyle: 'italic', textAlign: 'center' }}>今天還沒有完成任務。</p>
+          ) : (
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              {todaysTasks.map(t => (
+                <li key={t.id} style={{ padding: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{t.title}</span>
+                  <span style={{ color: '#4ade80' }}>✔ 完成</span>
+                </li>
+              ))}
+            </ul>
+          )}
 
         </div>
       </div>
@@ -371,18 +535,46 @@ function App() {
 
   return (
     <div className="app-container">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <button onClick={() => setView('profile')} style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center' }} title="英雄手冊">
+          <span style={{ marginRight: '5px' }}>👑</span> 我的手冊
+        </button>
         <button onClick={openStats} style={{ background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center' }} title="查看統計">
           <BarChart2 size={18} style={{ marginRight: '5px' }} /> 統計
         </button>
       </div>
       <div className="glass-panel boss-area">
-        <h2 style={{ margin: '0 0 10px 0' }}>{boss.name}</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h2 style={{ margin: 0 }}>{boss.name}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontSize: '0.9rem', color: '#fbbf24', fontWeight: 'bold' }}>
+              SP: {Array(profile.sp || 0).fill('★').join('')}{Array(Math.max(0, 3 - (profile.sp || 0))).fill('☆').join('')}
+            </span>
+            {(profile.sp || 0) > 0 && boss.hp > 0 && (
+              <button
+                onClick={castUltimate}
+                style={{
+                  background: 'linear-gradient(45deg, #ff007f, #7928ca)',
+                  padding: '5px 10px',
+                  fontSize: '0.8rem',
+                  border: '1px solid white',
+                  animation: 'pulse 1.5s infinite'
+                }}
+                className="ultimate-btn"
+              >
+                施放終極大招！ 🌟
+              </button>
+            )}
+          </div>
+        </div>
 
         <div style={{ position: 'relative', display: 'inline-block' }}>
           <div className={`boss-emoji ${isHit ? 'hit' : ''}`}>{boss.hp > 0 ? boss.emoji : '☠️'}</div>
           {attackEffect && (
             <div className={`magic-effect effect-${attackEffect.type}`}>{attackEffect.emoji}</div>
+          )}
+          {ultimateEffect && (
+            <div className={`magic-effect ultimate-${ultimateEffect.type}`} style={{ zIndex: 10 }}>{ultimateEffect.emoji}</div>
           )}
         </div>
 
@@ -425,18 +617,23 @@ function App() {
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <label style={{ fontSize: '0.8rem', color: '#aaa' }}>持續時間</label>
-              <select
+              <label style={{ fontSize: '0.8rem', color: '#aaa' }}>持續時間 (自訂分鐘)</label>
+              <input
+                type="number"
+                list="duration-presets"
                 className="input-field"
                 value={newTaskDuration}
+                onClick={e => e.target.select()}
                 onChange={e => setNewTaskDuration(e.target.value)}
-              >
-                <option value="5">+5 分鐘</option>
-                <option value="15">+15 分鐘</option>
-                <option value="30">+30 分鐘</option>
-                <option value="60">+1 小時</option>
-                <option value="120">+2 小時</option>
-              </select>
+                min="1"
+              />
+              <datalist id="duration-presets">
+                <option value="5" label="+5 分鐘"></option>
+                <option value="15" label="+15 分鐘"></option>
+                <option value="30" label="+30 分鐘"></option>
+                <option value="60" label="+1 小時"></option>
+                <option value="120" label="+2 小時"></option>
+              </datalist>
             </div>
           </div>
           <div className="form-row">
@@ -458,12 +655,14 @@ function App() {
                         }
                       }}
                       style={{
-                        padding: '4px',
-                        minWidth: '28px',
-                        borderRadius: '4px',
-                        fontSize: '0.8rem',
+                        padding: '10px 4px',
+                        minWidth: '40px',
+                        margin: '2px',
+                        borderRadius: '6px',
+                        fontSize: '0.9rem',
                         backgroundColor: isSelected ? 'var(--text-main)' : 'rgba(255,255,255,0.1)',
-                        color: isSelected ? 'var(--bg-color)' : 'white'
+                        color: isSelected ? 'var(--bg-color)' : 'white',
+                        border: 'none'
                       }}
                     >
                       {day}

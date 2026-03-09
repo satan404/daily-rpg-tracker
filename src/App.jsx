@@ -19,6 +19,7 @@ function App() {
   const [statsData, setStatsData] = useState([]);
   const [attackEffect, setAttackEffect] = useState(null); // { type: 'fire', emoji: '🔥' }
   const [ultimateEffect, setUltimateEffect] = useState(null); // { type: 'meteor', emoji: '☄️' }
+  const [particles, setParticles] = useState([]); // Array of particle objects
   const [isHit, setIsHit] = useState(false);
   const [profile, setProfile] = useState(AchievementEngine.getProfileState());
 
@@ -296,6 +297,22 @@ function App() {
         { type: 'slash', emoji: '🗡️', name: '烈風亂斬' }
       ];
       const randomUlt = ultimateTypes[Math.floor(Math.random() * ultimateTypes.length)];
+      // Generate Particles
+      const newParticles = [];
+      const particleEmojis = ['✨', '💥', '⚡', '💫', '🔥', '🌟', '💨'];
+      for (let i = 0; i < 40; i++) {
+        newParticles.push({
+          id: i,
+          emoji: particleEmojis[Math.floor(Math.random() * particleEmojis.length)],
+          tx: (Math.random() - 0.5) * 400 + 'px', // Random X translation (-200px to +200px)
+          ty: (Math.random() - 0.5) * 400 + 'px', // Random Y translation
+          delay: Math.random() * 0.5 + 's', // Staggered start
+          duration: (Math.random() * 1 + 1) + 's', // 1s to 2s
+          scale: Math.random() * 1.5 + 0.5,
+          color: `hsl(${Math.random() * 360}, 100%, 70%)`
+        });
+      }
+      setParticles(newParticles);
       setUltimateEffect(randomUlt);
       setIsHit(true);
 
@@ -304,6 +321,7 @@ function App() {
       // Longer timeout to allow complex animations to play out (2.5 seconds)
       setTimeout(() => {
         setUltimateEffect(null);
+        setParticles([]);
         setIsHit(false);
       }, 2500);
 
@@ -547,9 +565,14 @@ function App() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h2 style={{ margin: 0 }}>{boss.name}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ fontSize: '0.9rem', color: '#fbbf24', fontWeight: 'bold' }}>
-              SP: {Array(profile.sp || 0).fill('★').join('')}{Array(Math.max(0, 3 - (profile.sp || 0))).fill('☆').join('')}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '5px' }}>
+              <span style={{ fontSize: '0.9rem', color: '#fbbf24', fontWeight: 'bold' }}>
+                SP: {Array(profile.sp || 0).fill('★').join('')}{Array(Math.max(0, 3 - (profile.sp || 0))).fill('☆').join('')}
+              </span>
+              <span style={{ fontSize: '0.65rem', color: '#4ade80', marginTop: '2px' }} title="完成3個任務可獲得1點SP">
+                能量: {Array(profile.spProgress || 0).fill('🟢').join('')}{Array(Math.max(0, 3 - (profile.spProgress || 0))).fill('⚪').join('')}
+              </span>
+            </div>
             {(profile.sp || 0) > 0 && boss.hp > 0 && (
               <button
                 onClick={castUltimate}
@@ -576,6 +599,23 @@ function App() {
           {ultimateEffect && (
             <div className={`magic-effect ultimate-${ultimateEffect.type}`} style={{ zIndex: 10 }}>{ultimateEffect.emoji}</div>
           )}
+          {particles.map(p => (
+            <div
+              key={p.id}
+              className="ult-particle"
+              style={{
+                '--tx': p.tx,
+                '--ty': p.ty,
+                '--dur': p.duration,
+                '--del': p.delay,
+                '--sc': p.scale,
+                filter: `drop-shadow(0 0 5px ${p.color})`,
+                zIndex: 11
+              }}
+            >
+              {p.emoji}
+            </div>
+          ))}
         </div>
 
         <div className="hp-bar-container">

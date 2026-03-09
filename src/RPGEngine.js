@@ -42,10 +42,14 @@ export class RPGEngine {
         // Simple hash function to pick a monster consistently
         let hash1 = 0;
         let hash2 = 0;
-        const seedStr = today + offset;
-        for (let i = 0; i < seedStr.length; i++) {
-            hash1 = seedStr.charCodeAt(i) + ((hash1 << 5) - hash1);
-            hash2 = seedStr.charCodeAt(seedStr.length - 1 - i) + ((hash2 << 5) - hash2);
+        const seedStr1 = today + "-" + offset + "-prefix";
+        const seedStr2 = today + "-" + offset + "-noun";
+
+        for (let i = 0; i < seedStr1.length; i++) {
+            hash1 = seedStr1.charCodeAt(i) + ((hash1 << 5) - hash1);
+        }
+        for (let i = 0; i < seedStr2.length; i++) {
+            hash2 = seedStr2.charCodeAt(i) + ((hash2 << 5) - hash2);
         }
 
         const prefixIndex = Math.abs(hash1) % MONSTER_PREFIXES.length;

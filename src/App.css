@@ -477,6 +477,40 @@
   }
 }
 
+.ult-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 1.5rem;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+  animation: explode-particle var(--dur) cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation-delay: var(--del);
+}
+
+@keyframes explode-particle {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0) rotate(0deg);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--tx) * 0.2), calc(-50% + var(--ty) * 0.2)) scale(var(--sc)) rotate(180deg);
+  }
+
+  80% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--tx) * 0.8), calc(-50% + var(--ty) * 0.8)) scale(var(--sc)) rotate(720deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0) rotate(1080deg);
+  }
+}
+
 .effect-dark {
   animation: consume-dark 0.8s ease-in forwards;
 }

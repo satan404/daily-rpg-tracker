@@ -812,3 +812,129 @@
     font-size: 1.2rem;
   }
 }
+
+/* --- Badge Unlock Overlay --- */
+.badge-unlock-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  animation: fade-in-out 4s forwards;
+  backdrop-filter: blur(0px);
+}
+
+@keyframes fade-in-out {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+
+  10% {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+
+  90% {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+}
+
+.badge-unlock-title {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #fbbf24;
+  text-shadow: 0 0 20px #fbbf24, 0 0 40px #ff0000;
+  margin-bottom: 40px;
+  animation: slide-down 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes slide-down {
+  0% {
+    transform: translateY(-100px) scale(0.2);
+    opacity: 0;
+    letter-spacing: -1rem;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    letter-spacing: 0.2rem;
+  }
+}
+
+.badge-unlock-container {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.badge-unlock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+  border: 2px solid rgba(251, 191, 36, 0.8);
+  box-shadow: inset 0 0 30px rgba(251, 191, 36, 0.3);
+  border-radius: 24px;
+  padding: 40px 50px;
+  animation: pop-up 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: 0.1s;
+  opacity: 0;
+}
+
+@keyframes pop-up {
+  0% {
+    transform: translateY(100px) scale(0.3) rotate(-10deg);
+    opacity: 0;
+    filter: drop-shadow(0 0 0px transparent);
+  }
+
+  60% {
+    transform: translateY(-20px) scale(1.1) rotate(5deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 40px #fbbf24) drop-shadow(0 0 80px white);
+  }
+}
+
+.badge-unlock-emoji {
+  font-size: 7rem;
+  margin-bottom: 20px;
+  animation: float-badge 2s ease-in-out infinite alternate;
+}
+
+@keyframes float-badge {
+  0% {
+    transform: translateY(-15px);
+  }
+
+  100% {
+    transform: translateY(15px);
+  }
+}
+
+.badge-unlock-name {
+  font-size: 2rem;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 0 10px black;
+}

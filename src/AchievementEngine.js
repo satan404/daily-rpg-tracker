@@ -5,9 +5,16 @@ export const AchievementEngine = {
     BADGES: {
         EARLY_BIRD: { id: 'early_bird', name: '早鳥先鋒', description: '完成今天的第一個任務', emoji: '🌅' },
         COMBO_STRIKER: { id: 'combo_striker', name: '連擊大師', description: '單日連續完成 3 個任務以上', emoji: '🔥' },
+        COMBO_MASTER: { id: 'combo_master', name: '無雙連擊', description: '單日連續完成 10 個任務以上', emoji: '☄️' },
         CONSISTENT_HERO_3: { id: 'consistent_3', name: '見習勇者', description: '連續 3 天完成任務', emoji: '🥉' },
         CONSISTENT_HERO_7: { id: 'consistent_7', name: '可靠勇者', description: '連續 7 天完成任務', emoji: '🥈' },
         CONSISTENT_HERO_30: { id: 'consistent_30', name: '傳說勇者', description: '連續 30 天完成任務', emoji: '🥇' },
+        TASK_NOVICE: { id: 'task_novice', name: '任務新手', description: '累計完成 10 個任務', emoji: '🌱' },
+        TASK_EXPERT: { id: 'task_expert', name: '任務達人', description: '累計完成 50 個任務', emoji: '🌳' },
+        TASK_MASTER: { id: 'task_master', name: '任務狂人', description: '累計完成 100 個任務', emoji: '👑' },
+        BOSS_SLAYER_1: { id: 'boss_slayer_1', name: '初戰告捷', description: '擊敗 1 隻魔王', emoji: '🗡️' },
+        BOSS_SLAYER_10: { id: 'boss_slayer_10', name: '魔王剋星', description: '擊敗 10 隻魔王', emoji: '⚔️' },
+        SP_HOARDER: { id: 'sp_hoarder', name: '儲備大師', description: '累積擁有 5 點 SP', emoji: '🔋' },
     },
 
     getProfileState() {
@@ -102,6 +109,15 @@ export const AchievementEngine = {
         if (profile.currentCombo >= 3) {
             grantBadge('COMBO_STRIKER');
         }
+        if (profile.currentCombo >= 10) grantBadge('COMBO_MASTER');
+
+        // Total Tasks Badges
+        if (profile.totalTasksCompleted >= 10) grantBadge('TASK_NOVICE');
+        if (profile.totalTasksCompleted >= 50) grantBadge('TASK_EXPERT');
+        if (profile.totalTasksCompleted >= 100) grantBadge('TASK_MASTER');
+
+        // SP Hoarder
+        if (profile.sp >= 5) grantBadge('SP_HOARDER');
 
         // Consecutive Days Badges
         if (profile.currentDailyStreak >= 3) grantBadge('CONSISTENT_HERO_3');
@@ -123,9 +139,21 @@ export const AchievementEngine = {
 
     onBossDefeated() {
         let profile = this.getProfileState();
+        let newlyUnlocked = [];
         profile.totalBossesDefeated += 1;
+
+        const grantBadge = (badgeId) => {
+            if (!profile.unlockedBadges.includes(badgeId)) {
+                profile.unlockedBadges.push(badgeId);
+                newlyUnlocked.push(this.BADGES[badgeId]);
+            }
+        };
+
+        if (profile.totalBossesDefeated >= 1) grantBadge('BOSS_SLAYER_1');
+        if (profile.totalBossesDefeated >= 10) grantBadge('BOSS_SLAYER_10');
+
         this.saveProfileState(profile);
-        return profile;
+        return { profile, newlyUnlocked };
     },
 
     useSp() {

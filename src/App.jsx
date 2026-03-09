@@ -39,6 +39,20 @@ function App() {
   const [particles, setParticles] = useState([]); // Array of particle objects
   const [isHit, setIsHit] = useState(false);
   const [profile, setProfile] = useState(AchievementEngine.getProfileState());
+  const [unlockedBadgesToDisplay, setUnlockedBadgesToDisplay] = useState([]);
+
+  const showBadges = (badges) => {
+    if (badges && badges.length > 0) {
+      setUnlockedBadgesToDisplay(prev => {
+        const existingIds = prev.map(b => b.id);
+        const unique = badges.filter(b => !existingIds.includes(b.id));
+        return [...prev, ...unique];
+      });
+      setTimeout(() => {
+        setUnlockedBadgesToDisplay(prev => prev.filter(p => !badges.find(b => b.id === p.id)));
+      }, 4000);
+    }
+  };
 
   const openStats = async () => {
     const { StatsEngine } = await import('./StatsEngine');
@@ -234,6 +248,9 @@ function App() {
     const { profile: newProfile, newlyUnlocked } = AchievementEngine.onTaskCompleted(id, newTasks);
     setProfile(newProfile);
 
+    // Show Badge Unlock Animation
+    showBadges(newlyUnlocked);
+
     // 3. Delay the attack effect and damage calculation to wait for scroll (400ms)
     setTimeout(() => {
       // Choose random magic attack (10 types)
@@ -266,10 +283,11 @@ function App() {
         setBoss({ ...boss, hp: newHp });
 
         if (newHp === 0) {
-          AchievementEngine.onBossDefeated();
-          setProfile(AchievementEngine.getProfileState());
+          const { profile: defProfile, newlyUnlocked: bossBadges } = AchievementEngine.onBossDefeated();
+          setProfile(defProfile);
+          showBadges(bossBadges);
 
-          let unlockMsg = newlyUnlocked.length > 0 ? ` 獲得勳章：${newlyUnlocked.map(b => b.emoji).join(' ')}` : '';
+          let unlockMsg = bossBadges && bossBadges.length > 0 ? ` 獲得勳章：${bossBadges.map(b => b.emoji).join(' ')}` : '';
           setMessage(`勝利！你用 ${randomEffect.emoji} 打敗了 ${boss.name}！ 🏆${unlockMsg} 新的魔王即將出現...`);
 
           // Spawn next boss after 2 seconds
@@ -345,9 +363,12 @@ function App() {
       setBoss({ ...boss, hp: newHp });
 
       if (newHp === 0) {
-        AchievementEngine.onBossDefeated();
-        setProfile(AchievementEngine.getProfileState());
-        setMessage(`太神啦！你用終極大招【${randomUlt.name}】秒殺了 ${boss.name}！ 🌟🌟🌟 新的魔王即將出現...`);
+        const { profile: defProfile, newlyUnlocked: bossBadges } = AchievementEngine.onBossDefeated();
+        setProfile(defProfile);
+        showBadges(bossBadges);
+
+        let unlockMsg = bossBadges && bossBadges.length > 0 ? ` 獲得勳章：${bossBadges.map(b => b.emoji).join(' ')}` : '';
+        setMessage(`太神啦！你用終極大招【${randomUlt.name}】秒殺了 ${boss.name}！ 🌟🌟🌟${unlockMsg} 新的魔王即將出現...`);
 
         // Wait a bit longer before spawning the next boss so they can see the full effect
         setTimeout(() => {
@@ -647,6 +668,21 @@ function App() {
           {message}
         </div>
       </div>
+
+      {/* Badge Unlocked Display Layer */}
+      {unlockedBadgesToDisplay.length > 0 && (
+        <div className="badge-unlock-overlay">
+          <div className="badge-unlock-title">達成成就！</div>
+          <div className="badge-unlock-container">
+            {unlockedBadgesToDisplay.map(badge => (
+              <div key={badge.id} className="badge-unlock-item">
+                <div className="badge-unlock-emoji">{badge.emoji}</div>
+                <div className="badge-unlock-name">{badge.name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {burningTasks.length > 0 && (
         <div className="task-list" style={{ marginBottom: '20px' }}>

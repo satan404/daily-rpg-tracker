@@ -29,6 +29,7 @@ function App() {
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskStartTime, setNewTaskStartTime] = useState('');
   const [newTaskDuration, setNewTaskDuration] = useState('15'); // default 15 mins
+  const [newTaskIsRecurring, setNewTaskIsRecurring] = useState(false);
   const [newTaskDays, setNewTaskDays] = useState([new Date().getDay()]); // Default to today only
   const [message, setMessage] = useState('出現了一隻新魔王！完成任務來打敗它吧！');
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -69,7 +70,7 @@ function App() {
       // Reset recurring tasks if it's a new day
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       parsedTasks = parsedTasks.map(t => {
-        if (t.lastCompletedDate !== todayStr && t.daysOfWeek) {
+        if (t.isRecurring && t.lastCompletedDate !== todayStr && t.daysOfWeek) {
           return {
             ...t,
             completed: false,
@@ -213,12 +214,15 @@ function App() {
       failed: false,
       startReminded: false,
       endReminded: false,
-      daysOfWeek: [...newTaskDays] // array of selected day indices (0-6)
+      isRecurring: newTaskIsRecurring,
+      daysOfWeek: newTaskIsRecurring ? [...newTaskDays] : [],
+      createdAtDate: format(new Date(), 'yyyy-MM-dd')
     };
 
     setTasks([...tasks, newTask].sort((a, b) => a.startTime.localeCompare(b.startTime)));
     setNewTaskName('');
     setNewTaskStartTime('');
+    setNewTaskIsRecurring(false);
     setNewTaskDays([new Date().getDay()]); // Reset to today
   };
 
@@ -403,8 +407,18 @@ function App() {
 
   // Process tasks before rendering
   const todayDayOfWeek = currentTime.getDay();
-  const processedTasks = [...tasks]
-    .filter(t => !t.daysOfWeek || t.daysOfWeek.includes(todayDayOfWeek))
+  const processedTasks = tasks
+    .filter(t => {
+      const todayDayIndex = new Date().getDay();
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      if (t.isRecurring) {
+        return t.daysOfWeek && t.daysOfWeek.includes(todayDayIndex);
+      } else if (t.createdAtDate) {
+        return t.createdAtDate === todayStr || (!t.completed && !t.failed);
+      } else {
+        return t.daysOfWeek && t.daysOfWeek.includes(todayDayIndex); // fallback
+      }
+    })
     .map(task => {
       let isBurning = false;
       let progressPercent = 0;
@@ -734,41 +748,54 @@ function App() {
             </div>
           </div>
           <div className="form-row">
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <label style={{ fontSize: '0.8rem', color: '#aaa' }}>重複設定</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '5px' }}>
-                {['一', '二', '三', '四', '五', '六', '日'].map((day, index) => {
-                  const dayIdx = index === 6 ? 0 : index + 1; // map visually to Date.getDay()
-                  const isSelected = newTaskDays.includes(dayIdx);
-                  return (
-                    <button
-                      key={dayIdx}
-                      type="button"
-                      onClick={() => {
-                        if (isSelected && newTaskDays.length > 1) {
-                          setNewTaskDays(newTaskDays.filter(d => d !== dayIdx));
-                        } else if (!isSelected) {
-                          setNewTaskDays([...newTaskDays, dayIdx]);
-                        }
-                      }}
-                      style={{
-                        padding: '10px 4px',
-                        minWidth: '40px',
-                        margin: '2px',
-                        borderRadius: '6px',
-                        fontSize: '0.9rem',
-                        backgroundColor: isSelected ? 'var(--text-main)' : 'rgba(255,255,255,0.1)',
-                        color: isSelected ? 'var(--bg-color)' : 'white',
-                        border: 'none'
-                      }}
-                    >
-                      {day}
-                    </button>
-                  );
-                })}
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginTop: '10px' }}>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={newTaskIsRecurring}
+                    onChange={(e) => setNewTaskIsRecurring(e.target.checked)}
+                  />
+                  <span className="slider"></span>
+                </label>
+                <span style={{ marginLeft: '12px', fontSize: '0.95rem', color: '#eee', cursor: 'pointer' }} onClick={() => setNewTaskIsRecurring(!newTaskIsRecurring)}>這是一個需要每週重複的任務</span>
               </div>
+
+              {newTaskIsRecurring && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '10px' }}>
+                  {['一', '二', '三', '四', '五', '六', '日'].map((day, index) => {
+                    const dayIdx = index === 6 ? 0 : index + 1; // map visually to Date.getDay()
+                    const isSelected = newTaskDays.includes(dayIdx);
+                    return (
+                      <button
+                        key={dayIdx}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected && newTaskDays.length > 1) {
+                            setNewTaskDays(newTaskDays.filter(d => d !== dayIdx));
+                          } else if (!isSelected) {
+                            setNewTaskDays([...newTaskDays, dayIdx]);
+                          }
+                        }}
+                        style={{
+                          padding: '10px 4px',
+                          minWidth: '40px',
+                          margin: '2px',
+                          borderRadius: '6px',
+                          fontSize: '0.9rem',
+                          backgroundColor: isSelected ? 'var(--text-main)' : 'rgba(255,255,255,0.1)',
+                          color: isSelected ? 'var(--bg-color)' : 'white',
+                          border: 'none'
+                        }}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <button type="submit" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '12px', minWidth: '40px' }}><Plus size={20} /></button>
+            <button type="submit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: newTaskIsRecurring ? 'flex-end' : 'center', marginTop: '10px', minWidth: '50px' }}><Plus size={20} /></button>
           </div>
         </form>
 
